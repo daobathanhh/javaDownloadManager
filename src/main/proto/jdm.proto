@@ -1,0 +1,227 @@
+syntax = "proto3";
+
+package jdm.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "JdmProto";
+
+service AccountService {
+    rpc CreateAccount(CreateAccountRequest) returns (CreateAccountResponse) {}
+    rpc GetAccount(GetAccountRequest) returns (GetAccountResponse) {}
+    rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {}
+    rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse) {}
+    rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {}
+}
+
+service SessionService {
+    rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {}
+    rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse) {}
+    rpc LogoutSession(LogoutSessionRequest) returns (LogoutSessionResponse) {}
+    rpc LogoutAllSessions(LogoutAllSessionsRequest) returns (LogoutAllSessionsResponse) {}
+}
+
+service DownloadTaskService {
+  rpc CreateDownloadTask(CreateDownloadTaskRequest) returns (CreateDownloadTaskResponse) {}
+  rpc GetDownloadTaskList(GetDownloadTaskListRequest) returns (GetDownloadTaskListResponse) {}
+  rpc UpdateDownloadTask(UpdateDownloadTaskRequest) returns (UpdateDownloadTaskResponse) {}
+  rpc DeleteDownloadTask(DeleteDownloadTaskRequest) returns (DeleteDownloadTaskResponse) {}
+  rpc GetDownloadTaskFile(GetDownloadTaskFileRequest) returns (stream GetDownloadTaskFileResponse) {}
+}
+
+
+enum DownloadType {
+    DOWNLOAD_TYPE_UNSPECIFIED = 0;
+    DOWNLOAD_TYPE_HTTP = 1;
+}
+
+enum DownloadStatus {
+    DOWNLOAD_STATUS_UNSPECIFIED = 0;
+    DOWNLOAD_STATUS_PENDING = 1;
+    DOWNLOAD_STATUS_DOWNLOADING = 2;
+    DOWNLOAD_STATUS_FAILED = 3;
+    DOWNLOAD_STATUS_SUCCESS = 4;
+}
+
+enum AccountStatus {
+    ACCOUNT_STATUS_UNSPECIFIED = 0;
+    ACCOUNT_STATUS_DISABLED = 1;
+    ACCOUNT_STATUS_ACTIVE = 2;
+    ACCOUNT_STATUS_LOCKED = 3;
+}
+
+message Account {
+    uint64 id = 1;
+    string account_name = 2;
+    string email = 3;
+    AccountStatus account_status = 4;
+    int32 failed_login_attempts = 5;
+    google.protobuf.Timestamp created_at = 6;
+    google.protobuf.Timestamp updated_at = 7;
+}
+
+message DownloadTask {
+    uint64 id = 1;
+    uint64 account_id = 2;
+    DownloadType download_type = 3;
+    string url = 4;
+    DownloadStatus download_status = 5;
+    string metadata = 6;  // JSON string for additional data
+    google.protobuf.Timestamp created_at = 7;
+    google.protobuf.Timestamp updated_at = 8;
+    google.protobuf.Timestamp completed_at = 9;  // optional
+}
+
+message CreateAccountRequest {
+    string account_name = 1 [(buf.validate.field).string = {
+        pattern:   "^[a-zA-Z0-9_-]{3,32}$",
+    }];
+    string password = 2 [(buf.validate.field).string = {
+        pattern:   "^[a-zA-Z0-9_-]{3,32}$",
+    }];
+    string email = 3 [(buf.validate.field).string = {
+        email: true,
+    }];  // Optional but recommended for password recovery
+}
+
+message CreateAccountResponse {
+    Account account = 1;
+}
+
+message GetAccountRequest {
+    uint64 account_id = 1;
+}
+
+message GetAccountResponse {
+    Account account = 1;
+}
+
+message ChangePasswordRequest {
+    string current_password = 1 [(buf.validate.field).string = {
+        pattern:   "^[a-zA-Z0-9_-]{3,32}$",
+    }];
+    string new_password = 2 [(buf.validate.field).string = {
+        pattern:   "^[a-zA-Z0-9_-]{3,32}$",
+    }];
+}
+
+message ChangePasswordResponse {
+    // Empty response - success indicated by no error status
+}
+
+message RequestPasswordResetRequest {
+    string email = 1 [(buf.validate.field).string = {
+        email: true,
+    }];
+}
+
+message RequestPasswordResetResponse {
+    // Always returns success to prevent email enumeration
+    // Actual email is sent only if account exists
+}
+
+message ResetPasswordRequest {
+    string reset_token = 1 [(buf.validate.field).string = {
+        min_len: 1,
+    }];
+    string new_password = 2 [(buf.validate.field).string = {
+        pattern:   "^[a-zA-Z0-9_-]{3,32}$",
+    }];
+}
+
+message ResetPasswordResponse {
+    // Empty response - success indicated by no error status
+}
+
+message CreateSessionRequest {
+    string account_name = 1 [(buf.validate.field).string = {
+        pattern:   "^[a-zA-Z0-9_-]{3,32}$",
+    }];
+    string password = 2 [(buf.validate.field).string = {
+        pattern:   "^[a-zA-Z0-9_-]{3,32}$",
+    }];
+}
+
+message CreateSessionResponse {
+    Account account = 1;
+    string access_token = 2;  // JWT access token (short-lived)
+    string refresh_token = 3;  // JWT refresh token (long-lived)
+    int64 access_token_expires_in = 4;  // seconds until expiration
+    int64 refresh_token_expires_in = 5;  // seconds until expiration
+}
+
+message RefreshSessionRequest {
+    string refresh_token = 1 [(buf.validate.field).string = {
+        min_len: 1,
+    }];
+}
+
+message RefreshSessionResponse {
+    string access_token = 1;  // New JWT access token
+    string refresh_token = 2;  // Optionally rotated refresh token
+    int64 access_token_expires_in = 3;  // seconds until expiration
+    int64 refresh_token_expires_in = 4;  // seconds until expiration
+}
+
+message LogoutSessionRequest {
+    // Access token is extracted from authorization header by server
+}
+
+message LogoutSessionResponse {
+    // Empty response - success indicated by no error status
+}
+
+message LogoutAllSessionsRequest {
+    // Logs out all sessions for the authenticated user
+}
+
+message LogoutAllSessionsResponse {
+    int32 sessions_revoked = 1;
+}
+
+message CreateDownloadTaskRequest {
+    DownloadType download_type = 1;
+    string url = 2 [(buf.validate.field).string = {
+        uri: true,
+    }];
+}
+
+message CreateDownloadTaskResponse {
+    DownloadTask download_task = 1;
+}
+
+message GetDownloadTaskListRequest {
+    uint64 offset = 1;
+    uint64 limit = 2 [(buf.validate.field).uint64 = {
+        lte: 100
+    }];
+}
+message GetDownloadTaskListResponse {
+    repeated DownloadTask download_task_list = 1;
+    uint64 total_download_task_count = 2;
+}
+
+message UpdateDownloadTaskRequest {
+    uint64 download_task_id = 1;
+    string url = 2 [(buf.validate.field).string = {
+        uri: true,
+    }];
+}
+message UpdateDownloadTaskResponse {
+    DownloadTask download_task = 1;
+}
+
+message DeleteDownloadTaskRequest {
+    uint64 download_task_id = 1;
+}
+
+message DeleteDownloadTaskResponse {}
+
+message GetDownloadTaskFileRequest {
+    uint64 download_task_id = 1;
+}
+message GetDownloadTaskFileResponse {
+    bytes data = 1;
+}
