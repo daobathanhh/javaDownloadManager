@@ -33,6 +33,10 @@ public class JwtTokenService {
     @Value("${jdm.token.refresh-token-expiry-seconds}")
     private long refreshTokenExpirySeconds;
 
+    /** When access token TTL is below this, client should call RefreshSession to continue session. */
+    @Value("${jdm.token.refresh-access-token-if-expires-within-seconds:3600}")
+    private long refreshAccessTokenIfExpiresWithinSeconds;
+
     public String generateAccessToken(long accountId, String jti) {
         return buildToken(accountId, jti, TYPE_ACCESS, accessTokenExpirySeconds);
     }
@@ -47,6 +51,11 @@ public class JwtTokenService {
 
     public long getRefreshTokenExpirySeconds() {
         return refreshTokenExpirySeconds;
+    }
+
+    /** Seconds before access token expiry at which client should refresh (continue session). */
+    public long getRefreshAccessTokenIfExpiresWithinSeconds() {
+        return refreshAccessTokenIfExpiresWithinSeconds;
     }
 
     private String buildToken(long accountId, String jti, String type, long expirySeconds) {
@@ -102,16 +111,33 @@ public class JwtTokenService {
 
     private String getKidFromHeader(String token) {
         int dot = token.indexOf('.');
-        if (dot <= 0) throw new JwtException("Invalid JWT format");
+        if (dot <= 0) {
+            throw new JwtException("Invalid JWT format");
+        }
+
         String headerB64 = token.substring(0, dot);
         byte[] decoded = java.util.Base64.getUrlDecoder().decode(headerB64);
-        String header = new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
-        if (header.contains("\"kid\"")) {
-            int start = header.indexOf("\"kid\"") + 6;
-            int end = header.indexOf('"', start);
-            if (end > start) return header.substring(start, end);
+        String headerJson = new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
+
+        // Very small, robust JSON extraction for "kid":"<value>"
+        int kidIndex = headerJson.indexOf("\"kid\"");
+        if (kidIndex < 0) {
+            throw new JwtException("JWT header missing kid");
         }
-        throw new JwtException("JWT header missing kid");
+        int colonIndex = headerJson.indexOf(':', kidIndex);
+        if (colonIndex < 0) {
+            throw new JwtException("JWT header missing kid");
+        }
+        int firstQuote = headerJson.indexOf('"', colonIndex + 1);
+        if (firstQuote < 0) {
+            throw new JwtException("JWT header missing kid");
+        }
+        int secondQuote = headerJson.indexOf('"', firstQuote + 1);
+        if (secondQuote < 0) {
+            throw new JwtException("JWT header missing kid");
+        }
+
+        return headerJson.substring(firstQuote + 1, secondQuote);
     }
 
     public record JwtClaims(long accountId, String jti, String type) {}

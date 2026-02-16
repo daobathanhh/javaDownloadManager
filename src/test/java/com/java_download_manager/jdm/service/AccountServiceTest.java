@@ -4,6 +4,7 @@ import com.java_download_manager.jdm.entities.Account;
 import com.java_download_manager.jdm.entities.AccountPassword;
 import com.java_download_manager.jdm.entities.PasswordResetToken;
 import com.java_download_manager.jdm.exceptions.*;
+import com.java_download_manager.jdm.redis.TakenAccountNameCache;
 import com.java_download_manager.jdm.repository.AccountPasswordRepository;
 import com.java_download_manager.jdm.repository.AccountRepository;
 import com.java_download_manager.jdm.repository.PasswordHistoryRepository;
@@ -50,6 +51,8 @@ class AccountServiceTest {
     private EntityManagerFactory entityManagerFactory;
     @Mock
     private PersistenceUnitUtil persistenceUnitUtil;
+    @Mock
+    private TakenAccountNameCache takenAccountNameCache;
 
     @InjectMocks
     private AccountService accountService;
@@ -61,6 +64,7 @@ class AccountServiceTest {
 
     @Test
     void createAccount_success() {
+        when(takenAccountNameCache.isTaken("alice")).thenReturn(false);
         when(accountRepository.existsByAccountName("alice")).thenReturn(false);
         when(entityManager.getEntityManagerFactory()).thenReturn(entityManagerFactory);
         when(entityManagerFactory.getPersistenceUnitUtil()).thenReturn(persistenceUnitUtil);
@@ -77,16 +81,19 @@ class AccountServiceTest {
                 ap instanceof AccountPassword
                         && "hashed".equals(((AccountPassword) ap).getHash())
                         && Long.valueOf(1L).equals(((AccountPassword) ap).getOfAccountId())));
+        verify(takenAccountNameCache).add("alice");
     }
 
     @Test
     void createAccount_throwsWhenDuplicateName() {
+        when(takenAccountNameCache.isTaken("alice")).thenReturn(false);
         when(accountRepository.existsByAccountName("alice")).thenReturn(true);
 
         assertThatThrownBy(() -> accountService.createAccount("alice", "secret", "a@b.com"))
                 .isInstanceOf(DuplicateAccountException.class)
                 .hasMessageContaining("alice");
 
+        verify(takenAccountNameCache).add("alice");
         verify(entityManager, never()).persist(any());
     }
 

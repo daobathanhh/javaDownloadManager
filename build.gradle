@@ -61,6 +61,7 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'io.lettuce:lettuce-core'
 }
 
 protobuf {
@@ -88,32 +89,59 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
-def redisMarker = layout.projectDirectory.file('.redis-started-by-jdm')
+def redisMarker = file('.redis-started-by-jdm')
 
 tasks.register('startRedis', Exec) {
 	commandLine 'redis-server', '--daemonize', 'yes'
 	ignoreExitValue = true
 	doFirst { logger.lifecycle('Starting Redis...') }
 	doLast {
-		if (execResult.exitValue == 0) {
-			redisMarker.get().asFile.text = ''
+		if (executionResult.get().exitValue == 0) {
+			redisMarker.text = ''
 		}
 	}
+}
+
+tasks.register('stopRedisExec', Exec) {
+	onlyIf { redisMarker.exists() }
+	commandLine 'redis-cli', 'shutdown'
+	ignoreExitValue = true
+	doFirst { logger.lifecycle('Stopping Redis...') }
 }
 
 tasks.register('stopRedis') {
+	dependsOn stopRedisExec
 	doLast {
-		if (redisMarker.get().asFile.exists()) {
-			logger.lifecycle('Stopping Redis...')
-			exec { commandLine 'redis-cli', 'shutdown'; ignoreExitValue = true }
-			redisMarker.get().asFile.delete()
+		if (redisMarker.exists()) {
+			redisMarker.delete()
 		}
 	}
 }
 
-tasks.named('bootRun') {
+def loadEnvFile(File envFile) {
+	def result = [:]
+	if (!envFile.exists()) return result
+	envFile.eachLine { line ->
+		line = line.trim()
+		if (line && !line.startsWith('#')) {
+			def eq = line.indexOf('=')
+			if (eq > 0) {
+				def key = line.substring(0, eq).trim()
+				def value = line.substring(eq + 1).trim()
+				if (value.size() >= 2 && value.startsWith('"') && value.endsWith('"')) value = value.substring(1, value.length() - 1)
+				else if (value.size() >= 2 && value.startsWith("'") && value.endsWith("'")) value = value.substring(1, value.length() - 1)
+				result[key] = value
+			}
+		}
+	}
+	return result
+}
+
+tasks.named('bootRun', JavaExec).configure {
 	dependsOn startRedis
 	finalizedBy stopRedis
+	def envVars = loadEnvFile(file('.env'))
+	envVars.each { k, v -> environment k, v }
 }
 
 tasks.named('test') {

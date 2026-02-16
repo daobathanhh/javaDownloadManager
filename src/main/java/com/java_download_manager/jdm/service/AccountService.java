@@ -15,11 +15,14 @@ import com.java_download_manager.jdm.exceptions.InvalidResetTokenException;
 import com.java_download_manager.jdm.repository.AccountPasswordRepository;
 import com.java_download_manager.jdm.repository.AccountRepository;
 import com.java_download_manager.jdm.redis.TakenAccountNameCache;
+import com.java_download_manager.jdm.redis.TakenEmailCache;
 import com.java_download_manager.jdm.repository.PasswordHistoryRepository;
 import com.java_download_manager.jdm.repository.PasswordResetTokenRepository;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,6 +37,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AccountService {
 
     @Value("${jdm.password-reset.expiry-minutes:1440}")
@@ -47,17 +51,29 @@ public class AccountService {
     private final PasswordResetMailService passwordResetMailService;
     private final EntityManager entityManager;
     private final TakenAccountNameCache takenAccountNameCache;
-
+    private final TakenEmailCache takenEmailCache;
 
     @Transactional
     public Account createAccount(String accountName, String plainPassword, String email) {
         if (takenAccountNameCache.isTaken(accountName)) {
+            log.error("Redis log: Account name already exists: " + accountName);
             throw new DuplicateAccountException("Account name already exists: " + accountName);
         }
         if (accountRepository.existsByAccountName(accountName)) {
             takenAccountNameCache.add(accountName); // so next check hits cache
             throw new DuplicateAccountException("Account name already exists: " + accountName);
         }
+
+        if (takenEmailCache.isTaken(email)) {
+            throw new DuplicateAccountException("Email already exists: " + email);
+        }
+
+        if (email != null && !email.isBlank()) {
+            if (accountRepository.existsByEmail(email)) {
+                throw new DuplicateAccountException("Email already exists: " + email);
+            }
+        }
+
         Account account = Account.builder()
                 .accountName(accountName)
                 .email(email != null && !email.isBlank() ? email : null)
@@ -93,6 +109,23 @@ public class AccountService {
 
     public Optional<Account> getAccountByAccountName(String accountName) {
         return accountRepository.findByAccountName(accountName);
+    }
+
+    /**
+     * Validates credentials for login. Returns the account only when account exists,
+     * status is ACTIVE, and password matches. Returns empty otherwise (no distinction
+     * between wrong password and account not found/disabled/locked).
+     */
+    public Optional<Account> validateCredentials(String accountName, String plainPassword) {
+        if (accountName == null || plainPassword == null) return Optional.empty();
+        Optional<Account> accountOpt = accountRepository.findByAccountName(accountName.trim());
+        if (accountOpt.isEmpty()) return Optional.empty();
+        Account account = accountOpt.get();
+        if (account.getAccountStatus() != AccountStatusEnum.ACTIVE) return Optional.empty();
+        Optional<AccountPassword> passwordOpt = accountPasswordRepository.findById(account.getId());
+        if (passwordOpt.isEmpty()) return Optional.empty();
+        if (!passwordEncoder.matches(plainPassword, passwordOpt.get().getHash())) return Optional.empty();
+        return Optional.of(account);
     }
 
     @Transactional
