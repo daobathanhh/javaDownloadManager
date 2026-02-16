@@ -14,6 +14,7 @@ import com.java_download_manager.jdm.exceptions.AccountNotAllowedForPasswordRese
 import com.java_download_manager.jdm.exceptions.InvalidResetTokenException;
 import com.java_download_manager.jdm.repository.AccountPasswordRepository;
 import com.java_download_manager.jdm.repository.AccountRepository;
+import com.java_download_manager.jdm.redis.TakenAccountNameCache;
 import com.java_download_manager.jdm.repository.PasswordHistoryRepository;
 import com.java_download_manager.jdm.repository.PasswordResetTokenRepository;
 
@@ -45,11 +46,16 @@ public class AccountService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetMailService passwordResetMailService;
     private final EntityManager entityManager;
+    private final TakenAccountNameCache takenAccountNameCache;
 
 
     @Transactional
     public Account createAccount(String accountName, String plainPassword, String email) {
+        if (takenAccountNameCache.isTaken(accountName)) {
+            throw new DuplicateAccountException("Account name already exists: " + accountName);
+        }
         if (accountRepository.existsByAccountName(accountName)) {
+            takenAccountNameCache.add(accountName); // so next check hits cache
             throw new DuplicateAccountException("Account name already exists: " + accountName);
         }
         Account account = Account.builder()
@@ -75,8 +81,9 @@ public class AccountService {
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
-        accountPasswordRepository.save(accountPassword);
+        entityManager.persist(accountPassword);
 
+        takenAccountNameCache.add(accountName);
         return account;
     }
 

@@ -19,6 +19,14 @@ configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
+	all {
+		resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+			if (details.requested.group == 'io.grpc') {
+				details.useVersion '1.70.0'
+				details.because 'Align gRPC versions to avoid NoSuchMethodError (e.g. StatsTraceContext.clientInboundHeaders)'
+			}
+		}
+	}
 }
 
 repositories {
@@ -42,13 +50,17 @@ dependencies {
 	implementation 'javax.annotation:javax.annotation-api:1.3.2'
 	implementation 'com.google.protobuf:protobuf-java:4.34.0-RC2'
 	implementation 'build.buf:protovalidate:1.1.0'
-	implementation 'io.grpc:grpc-protobuf:1.70.0'
-	implementation 'io.grpc:grpc-services:1.70.0'
-	implementation 'io.grpc:grpc-stub:1.70.0'
-	runtimeOnly 'io.grpc:grpc-netty-shaded:1.70.0'
+	implementation platform('io.grpc:grpc-bom:1.70.0')
+	implementation 'io.grpc:grpc-protobuf'
+	implementation 'io.grpc:grpc-services'
+	implementation 'io.grpc:grpc-stub'
+	runtimeOnly 'io.grpc:grpc-netty-shaded'
 	implementation "net.devh:grpc-server-spring-boot-starter:3.1.0.RELEASE"
 	implementation 'net.devh:grpc-client-spring-boot-starter:3.1.0.RELEASE'
-
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 protobuf {
@@ -74,4 +86,37 @@ protobuf {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+def redisMarker = layout.projectDirectory.file('.redis-started-by-jdm')
+
+tasks.register('startRedis', Exec) {
+	commandLine 'redis-server', '--daemonize', 'yes'
+	ignoreExitValue = true
+	doFirst { logger.lifecycle('Starting Redis...') }
+	doLast {
+		if (execResult.exitValue == 0) {
+			redisMarker.get().asFile.text = ''
+		}
+	}
+}
+
+tasks.register('stopRedis') {
+	doLast {
+		if (redisMarker.get().asFile.exists()) {
+			logger.lifecycle('Stopping Redis...')
+			exec { commandLine 'redis-cli', 'shutdown'; ignoreExitValue = true }
+			redisMarker.get().asFile.delete()
+		}
+	}
+}
+
+tasks.named('bootRun') {
+	dependsOn startRedis
+	finalizedBy stopRedis
+}
+
+tasks.named('test') {
+	dependsOn startRedis
+	finalizedBy stopRedis
 }

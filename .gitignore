@@ -37,3 +37,6 @@ out/
 .vscode/
 
 .env*
+
+# Redis marker (Gradle startRedis/stopRedis)
+.redis-started-by-jdm

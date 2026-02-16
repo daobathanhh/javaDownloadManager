@@ -53,16 +53,26 @@ public class AccountGrpcController extends AccountServiceGrpc.AccountServiceImpl
 
     @Override
     public void getAccount(GetAccountRequest request, StreamObserver<GetAccountResponse> responseObserver) {
-        var accountOpt = accountService.getAccountById(request.getAccountId());
-        if (accountOpt.isEmpty()) {
-            responseObserver.onError(Status.NOT_FOUND
-                    .withDescription("Account not found: " + request.getAccountId())
-                    .asRuntimeException());
-            return;
+        try {
+            var accountOpt = accountService.getAccountById(request.getAccountId());
+            if (accountOpt.isEmpty()) {
+                responseObserver.onError(Status.NOT_FOUND
+                        .withDescription("Account not found: " + request.getAccountId())
+                        .asRuntimeException());
+                return;
+            }
+            jdm.v1.Account protoAccount = toProtoAccount(accountOpt.get());
+            responseObserver.onNext(GetAccountResponse.newBuilder().setAccount(protoAccount).build());
+            responseObserver.onCompleted();
         }
-        jdm.v1.Account protoAccount = toProtoAccount(accountOpt.get());
-        responseObserver.onNext(GetAccountResponse.newBuilder().setAccount(protoAccount).build());
-        responseObserver.onCompleted();
+        catch (Exception e) {
+            responseObserver.onError(
+                Status.INTERNAL
+                .withDescription("Internal error")
+                .withCause(e)
+                .asRuntimeException()
+            );
+        }
     }
 
     @Override
