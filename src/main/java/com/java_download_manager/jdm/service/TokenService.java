@@ -59,9 +59,6 @@ public class TokenService {
         return currentPrivateKey;
     }
 
-    /**
-     * Load public key by kid (for JWT verification). Tries cache first, then DB. Caches when loaded from DB.
-     */
     public Optional<PublicKey> getPublicKeyForVerification(String kid) {
         if (kid == null || kid.isBlank()) return Optional.empty();
         Optional<String> pemOpt = tokenPublicKeyCache.get(kid);
@@ -79,9 +76,6 @@ public class TokenService {
         return pemOpt.flatMap(TokenService::parsePemToPublicKey);
     }
 
-    /** 
-     * Decode PEM string (from DB) back to PublicKey. 
-     */
     static Optional<PublicKey> parsePemToPublicKey(String pem) {
         try {
             String content = pem
@@ -95,7 +89,6 @@ public class TokenService {
         }
     }
 
-    /** Encode public key to PEM string for DB storage. */
     private static String toPem(PublicKey key) {
         String base64 = Base64.getEncoder().encodeToString(key.getEncoded());
         return "-----BEGIN PUBLIC KEY-----\n"

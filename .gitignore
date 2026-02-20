@@ -38,7 +38,10 @@ out/
 ### VS Code ###
 .vscode/
 
-.env*
+.env
+.env.*
+!.env.example
 
-# Redis marker (Gradle startRedis/stopRedis)
+.minio-started-by-jdm
 .redis-started-by-jdm
+.rabbitmq-started-by-jdm

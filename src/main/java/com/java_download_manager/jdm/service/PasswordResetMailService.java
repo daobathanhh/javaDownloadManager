@@ -12,10 +12,6 @@ import org.springframework.stereotype.Service;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Sends the password reset email to the user. Runs async so the request returns quickly.
- * Subject and body are read from config (see jdm.mail.password-reset.*).
- */
 @Service
 public class PasswordResetMailService {
 
@@ -44,9 +40,6 @@ public class PasswordResetMailService {
         this.mailSender = mailSender;
     }
 
-    /**
-     * Send the password reset email asynchronously. Returns immediately; sending happens in the background.
-     */
     @Async
     public void sendPasswordResetEmail(String toEmail, String resetToken) {
         String encodedToken = URLEncoder.encode(resetToken, StandardCharsets.UTF_8);

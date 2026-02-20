@@ -3,10 +3,6 @@ package com.java_download_manager.jdm.redis;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
 
-/**
- * Cache of taken emails to avoid DB hits on duplicate-email checks.
- * When Redis is not configured, a bean is still provided but all operations no-op.
- */
 public class TakenEmailCache {
 
     private static final String REDIS_KEY = "jdm:taken_email_set";

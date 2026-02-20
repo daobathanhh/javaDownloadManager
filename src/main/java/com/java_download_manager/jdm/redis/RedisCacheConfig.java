@@ -7,11 +7,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
 
-/**
- * Application caches that use Redis when available: registers beans for taken account names,
- * taken emails, and token public keys. Each cache has a real implementation when
- * {@code jdmRedisTemplate} exists and a no-op when Redis is not configured.
- */
 @Configuration
 public class RedisCacheConfig {
 

@@ -14,11 +14,6 @@ import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/**
- * Parses the Bearer token from gRPC metadata and sets {@link GrpcAuthContext#ACCOUNT_ID}
- * and {@link GrpcAuthContext#ACCESS_TOKEN_JTI} when the token is a valid, non-revoked access token.
- * Protected RPCs can then use these context values; unauthenticated calls get null.
- */
 @Component
 @GrpcGlobalServerInterceptor
 @Order(0)

@@ -14,13 +14,6 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-/**
- * Redis config. When spring.redis.host is set, provides a {@link RedisConnectionFactory}
- * (if not already present) and a {@link RedisTemplate}{@code <String, String>} named
- * "jdmRedisTemplate" for application caches (taken account names, taken emails, token public keys).
- * Uses a distinct bean name to avoid conflicting with Spring Boot's auto-configured template.
- * Uses a factory that disables CLIENT SETINFO so Redis 7.0.x (without SETINFO) works.
- */
 @Configuration
 public class RedisConfig {
 
@@ -52,11 +45,6 @@ public class RedisConfig {
         return template;
     }
 
-    /**
-     * Lettuce connection factory that builds the client with empty library name/version
-     * so CLIENT SETINFO is not sent. Fixes "ERR unknown subcommand 'SETINFO'" on Redis 7.0.x
-     * (SETINFO was added in Redis 7.2).
-     */
     private static final class CompatibleLettuceConnectionFactory extends LettuceConnectionFactory {
 
         private final RedisStandaloneConfiguration standaloneConfig;

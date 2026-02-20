@@ -20,9 +20,6 @@ public class SessionService {
     private final TokenService tokenService;
     private final SessionRepository sessionRepository;
 
-    /**
-     * Result of creating a session (login). Contains account and tokens with expiry info.
-     */
     public record CreateSessionResult(
             Account account,
             String accessToken,
@@ -31,9 +28,6 @@ public class SessionService {
             long refreshTokenExpiresInSeconds
     ) {}
 
-    /**
-     * Result of refreshing a session. New access token and optionally rotated refresh token.
-     */
     public record RefreshSessionResult(
             String accessToken,
             String refreshToken,
@@ -98,7 +92,6 @@ public class SessionService {
         Session session = sessionOpt.get();
         if (session.getOfAccountId() != accountId) return Optional.empty();
 
-        // Rotate refresh token and issue new access token
         String newRefreshJti = UUID.randomUUID().toString().replace("-", "");
         String newRefreshToken = jwtTokenService.generateRefreshToken(accountId, newRefreshJti);
         long refreshExpiresSec = jwtTokenService.getRefreshTokenExpirySeconds();

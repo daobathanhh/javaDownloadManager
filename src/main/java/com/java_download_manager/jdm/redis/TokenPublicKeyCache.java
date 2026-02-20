@@ -5,10 +5,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Cache of JWT token public keys by kid. Used for verification without hitting DB.
- * When Redis is not configured, a no-op instance is provided (get returns empty, put no-ops).
- */
 public class TokenPublicKeyCache {
 
     private static final String REDIS_KEY_PREFIX = "jdm:token_public_key:";

@@ -56,24 +56,20 @@ public class AccountService {
     @Transactional
     public Account createAccount(String accountName, String plainPassword, String email) {
         if (takenAccountNameCache.isTaken(accountName)) {
-            log.error("Redis log: Account name already exists: " + accountName);
             throw new DuplicateAccountException("Account name already exists: " + accountName);
         }
         if (accountRepository.existsByAccountName(accountName)) {
             takenAccountNameCache.add(accountName); // so next check hits cache
             throw new DuplicateAccountException("Account name already exists: " + accountName);
         }
-
         if (takenEmailCache.isTaken(email)) {
             throw new DuplicateAccountException("Email already exists: " + email);
         }
-
         if (email != null && !email.isBlank()) {
             if (accountRepository.existsByEmail(email)) {
                 throw new DuplicateAccountException("Email already exists: " + email);
             }
         }
-
         Account account = Account.builder()
                 .accountName(accountName)
                 .email(email != null && !email.isBlank() ? email : null)
@@ -87,7 +83,6 @@ public class AccountService {
         } else {
             account.setId(accountId);
         }
-
         String hash = passwordEncoder.encode(plainPassword);
         LocalDateTime now = LocalDateTime.now();
         AccountPassword accountPassword = AccountPassword.builder()
@@ -111,11 +106,6 @@ public class AccountService {
         return accountRepository.findByAccountName(accountName);
     }
 
-    /**
-     * Validates credentials for login. Returns the account only when account exists,
-     * status is ACTIVE, and password matches. Returns empty otherwise (no distinction
-     * between wrong password and account not found/disabled/locked).
-     */
     public Optional<Account> validateCredentials(String accountName, String plainPassword) {
         if (accountName == null || plainPassword == null) return Optional.empty();
         Optional<Account> accountOpt = accountRepository.findByAccountName(accountName.trim());
@@ -153,12 +143,6 @@ public class AccountService {
         accountPasswordRepository.save(accountPassword);
     }
 
-    /**
-     * Request a password reset for the given email. Always returns without error (to prevent
-     * email enumeration). If an account exists, a reset token is created and should be sent
-     * to the user (e.g. by email); caller or a separate sender can use the returned token
-     * for the reset link, or implement an email sender and not return the token.
-     */
     @Transactional
     public void requestPasswordReset(String email) {
         if (email == null || email.isBlank()) {

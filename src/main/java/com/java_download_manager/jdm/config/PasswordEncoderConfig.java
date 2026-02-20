@@ -9,10 +9,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class PasswordEncoderConfig {
 
-    /**
-     * BCrypt strength (cost factor). Log2 of the number of rounds (e.g. 10 -> 2^10 rounds).
-     * Higher = more secure but slower. Typical range 10–12; default 10.
-     */
     @Value("${jdm.password.bcrypt-strength:10}")
     private int bcryptStrength;
 

@@ -41,9 +41,6 @@ public class Account {
     @Column(name = "email", unique = true, length = 256)
     private String email;
 
-    /**
-     * 0=disabled, 1=active, 2=locked (matches DB COMMENT).
-     */
     @Column(name = "account_status", nullable = false)
     @Enumerated(EnumType.ORDINAL)
     @Builder.Default

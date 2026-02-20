@@ -33,7 +33,6 @@ public class JwtTokenService {
     @Value("${jdm.token.refresh-token-expiry-seconds}")
     private long refreshTokenExpirySeconds;
 
-    /** When access token TTL is below this, client should call RefreshSession to continue session. */
     @Value("${jdm.token.refresh-access-token-if-expires-within-seconds:3600}")
     private long refreshAccessTokenIfExpiresWithinSeconds;
 
@@ -53,7 +52,6 @@ public class JwtTokenService {
         return refreshTokenExpirySeconds;
     }
 
-    /** Seconds before access token expiry at which client should refresh (continue session). */
     public long getRefreshAccessTokenIfExpiresWithinSeconds() {
         return refreshAccessTokenIfExpiresWithinSeconds;
     }
@@ -119,7 +117,6 @@ public class JwtTokenService {
         byte[] decoded = java.util.Base64.getUrlDecoder().decode(headerB64);
         String headerJson = new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
 
-        // Very small, robust JSON extraction for "kid":"<value>"
         int kidIndex = headerJson.indexOf("\"kid\"");
         if (kidIndex < 0) {
             throw new JwtException("JWT header missing kid");

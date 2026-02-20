@@ -29,6 +29,10 @@ service DownloadTaskService {
   rpc UpdateDownloadTask(UpdateDownloadTaskRequest) returns (UpdateDownloadTaskResponse) {}
   rpc DeleteDownloadTask(DeleteDownloadTaskRequest) returns (DeleteDownloadTaskResponse) {}
   rpc GetDownloadTaskFile(GetDownloadTaskFileRequest) returns (stream GetDownloadTaskFileResponse) {}
+  rpc GetDownloadTaskProgress(GetDownloadTaskProgressRequest) returns (GetDownloadTaskProgressResponse) {}
+  rpc GetDownloadTaskSegments(GetDownloadTaskSegmentsRequest) returns (GetDownloadTaskSegmentsResponse) {}
+  rpc PauseDownloadTask(PauseDownloadTaskRequest) returns (PauseDownloadTaskResponse) {}
+  rpc ResumeDownloadTask(ResumeDownloadTaskRequest) returns (ResumeDownloadTaskResponse) {}
 }
 
 
@@ -225,3 +229,40 @@ message GetDownloadTaskFileRequest {
 message GetDownloadTaskFileResponse {
     bytes data = 1;
 }
+
+message GetDownloadTaskProgressRequest {
+    uint64 download_task_id = 1;
+}
+message GetDownloadTaskProgressResponse {
+    uint64 downloaded_bytes = 1;
+    uint64 total_bytes = 2;
+    double percent = 3;
+    uint64 speed_bytes_per_sec = 4;
+    uint64 remaining_seconds = 5;
+    string status = 6;
+}
+
+message GetDownloadTaskSegmentsRequest {
+    uint64 download_task_id = 1;
+}
+message SegmentDetail {
+    int32 id = 1;
+    int64 start_offset = 2;
+    int64 end_offset = 3;
+    int64 size = 4;
+    int64 downloaded = 5;
+    string state = 6;
+}
+message GetDownloadTaskSegmentsResponse {
+    repeated SegmentDetail segments = 1;
+}
+
+message PauseDownloadTaskRequest {
+    uint64 download_task_id = 1;
+}
+message PauseDownloadTaskResponse {}
+
+message ResumeDownloadTaskRequest {
+    uint64 download_task_id = 1;
+}
+message ResumeDownloadTaskResponse {}
