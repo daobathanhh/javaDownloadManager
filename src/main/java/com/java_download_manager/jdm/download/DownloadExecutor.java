@@ -87,7 +87,7 @@ public class DownloadExecutor {
 
     private void runChunkedDownload(Download download, Long taskId) {
         long totalSize = download.getTotalSize();
-        DynamicSegmentPool pool = new DynamicSegmentPool(totalSize, minSegmentSizeBytes);
+        DynamicSegmentPool pool = new DynamicSegmentPool(totalSize, minSegmentSizeBytes, chunkCount);
 
         DownloadProgress progress = null;
         if (progressManager != null && taskId != null) {

@@ -20,14 +20,30 @@ public final class DynamicSegmentPool {
     private final ConcurrentLinkedQueue<Chunk> pending = new ConcurrentLinkedQueue<>();
     private final ConcurrentLinkedQueue<Chunk> allChunks = new ConcurrentLinkedQueue<>();
 
-    public DynamicSegmentPool(long totalSize, long minSegmentSize) {
+    /**
+     * @param totalSize      Total file size in bytes
+     * @param minSegmentSize Minimum segment size; segments smaller than 2x this are not split
+     * @param initialCount   Number of equal segments to pre-split; balances load across workers
+     */
+    public DynamicSegmentPool(long totalSize, long minSegmentSize, int initialCount) {
         if (totalSize <= 0) throw new IllegalArgumentException("totalSize must be positive");
         if (minSegmentSize <= 0) throw new IllegalArgumentException("minSegmentSize must be positive");
+        if (initialCount <= 0) throw new IllegalArgumentException("initialCount must be positive");
         this.totalSize = totalSize;
         this.minSegmentSize = minSegmentSize;
-        Chunk initial = new Chunk(nextId.getAndIncrement(), 0, totalSize - 1, 0);
-        pending.offer(initial);
-        allChunks.offer(initial);
+
+        long baseSize = totalSize / initialCount;
+        int remainder = (int) (totalSize % initialCount);
+        long offset = 0;
+        for (int i = 0; i < initialCount; i++) {
+            long segSize = baseSize + (i < remainder ? 1 : 0);
+            long end = offset + segSize - 1;
+            Chunk chunk = new Chunk(nextId.getAndIncrement(), offset, end, offset);
+            pending.offer(chunk);
+            allChunks.offer(chunk);
+            offset = end + 1;
+        }
+        log.debug("Pre-split {} bytes into {} segments (minSegmentSize={})", totalSize, initialCount, minSegmentSize);
     }
 
     public synchronized Optional<Chunk> takeSegment() {

@@ -31,6 +31,7 @@ import com.java_download_manager.jdm.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 
 @Service
 @RequiredArgsConstructor
@@ -249,8 +250,9 @@ public class DownloadTaskService {
     /**
      * Execute a download task by id. Called by the RabbitMQ consumer (or a cron). Idempotent:
      * only runs when status is PENDING. Sets DOWNLOADING, fetches URL, uploads to S3/MinIO if
-     * configured, then sets SUCCESS or FAILED. Progress is written to metadata during DOWNLOADING.
+     * configured, then sets SUCCESS or FAILED. Runs asynchronously for parallel execution.
      */
+    @Async("downloadTaskExecutor")
     @Transactional
     public void executeDownloadTask(long taskId) {
         Optional<DownloadTask> opt = downloadTaskRepository.findById(taskId);

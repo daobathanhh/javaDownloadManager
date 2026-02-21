@@ -58,7 +58,7 @@ public class DownloadTaskRestController {
             @RequestParam(defaultValue = "0") int offset,
             @RequestParam(defaultValue = "20") int limit,
             HttpServletRequest request) {
-        Long accountId = requireAccountId(request);
+        Long accountId = requireAccountId(request); 
         int pageSize = Math.min(Math.max(limit, 1), 100);
         int page = offset / pageSize;
         List<DownloadTask> tasks = downloadTaskService.listDownloadTasks(accountId, page, pageSize);
