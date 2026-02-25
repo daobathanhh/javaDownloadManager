@@ -54,7 +54,7 @@ public class DownloadExecutor {
 
     public String execute(String url, Path outputPath, Long taskId) {
         Download download = new Download(url, outputPath, 0, null);
-        boolean metadataOk = fileRequester.requestMetadata(download);
+        boolean metadataOk = fileRequester.requestMetadataAsync(download).join();
 
         String filename = download.getSuggestedFilename();
         if (filename == null || filename.isBlank()) {

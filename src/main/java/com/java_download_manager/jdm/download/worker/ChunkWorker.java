@@ -63,7 +63,7 @@ public class ChunkWorker implements Runnable {
             }
 
             try (InputStream in = response.body();
-                 RandomAccessFile raf = new RandomAccessFile(download.getOutputPath().toFile(), "rw")) {
+                RandomAccessFile raf = new RandomAccessFile(download.getOutputPath().toFile(), "rw")) {
                 raf.seek(chunk.getStartOffset());
                 byte[] buffer = new byte[8192];
                 int read;

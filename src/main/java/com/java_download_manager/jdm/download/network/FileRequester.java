@@ -4,12 +4,17 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import com.java_download_manager.jdm.download.core.Download;
 import com.java_download_manager.jdm.download.util.ContentDispositionParser;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,9 +22,63 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class FileRequester {
 
+    @Qualifier("requestMetadataExecutor")
+    private final Executor requestMetadataExecutor;
+
     private final HttpClient httpClient;
 
     private static final String UA = MetadataRequestHeaders.UA_CHROME;
+
+    public CompletableFuture<Boolean> requestMetadataAsync(Download download) {
+        CompletableFuture<Boolean> f1 = CompletableFuture.supplyAsync(new Supplier<Boolean>() {
+            @Override
+            public Boolean get() {
+                return tryHead(download);
+            }
+        }, requestMetadataExecutor);
+        CompletableFuture<Boolean> f2 = CompletableFuture.supplyAsync(new Supplier<Boolean>() {
+            @Override
+            public Boolean get() {
+                return tryRange(download, 0, 0);
+            }
+        }, requestMetadataExecutor);
+        CompletableFuture<Boolean> f3 = CompletableFuture.supplyAsync(new Supplier<Boolean>() {
+            @Override
+            public Boolean get() {
+                return tryRange(download, 0, 1);
+            }
+        }, requestMetadataExecutor);
+        CompletableFuture<Boolean> f4 = CompletableFuture.supplyAsync(new Supplier<Boolean>() {
+            @Override
+            public Boolean get() {
+                return tryRange(download, 0, 499);
+            }
+        }, requestMetadataExecutor);
+
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
+        Consumer<Boolean> onComplete = new Consumer<Boolean>() {
+            @Override
+            public void accept(Boolean success) {
+                if (Boolean.TRUE.equals(success)) {
+                    result.complete(true);
+                }
+            }
+        };
+        f1.thenAccept(onComplete);
+        f2.thenAccept(onComplete);
+        f3.thenAccept(onComplete);
+        f4.thenAccept(onComplete);
+
+        CompletableFuture.allOf(f1, f2, f3, f4).thenRun(new Runnable() {
+            @Override
+            public void run() {
+                if (!result.isDone()) {
+                    result.complete(tryFullGetAbort(download));
+                }
+            }
+        });
+        return result;
+    }
 
     public boolean requestMetadata(Download download) {
         if (tryHead(download)) return true;

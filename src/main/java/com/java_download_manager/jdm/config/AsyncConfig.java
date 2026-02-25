@@ -27,4 +27,19 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * Executor for async metadata fetches (e.g. FileRequester.requestMetadata).
+     * Small pool since metadata requests are quick and I/O-bound.
+     */
+    @Bean(name = "requestMetadataExecutor")
+    public Executor requestMetadataExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(8);
+        executor.setQueueCapacity(64);
+        executor.setThreadNamePrefix("jdm-metadata-");
+        executor.initialize();
+        return executor;
+    }
 }

@@ -37,7 +37,7 @@ public class DownloadConfig {
     @Bean
     public HttpClient downloadHttpClient() throws Exception {
         var builder = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
+                .connectTimeout(Duration.ofSeconds(2))
                 .followRedirects(HttpClient.Redirect.NORMAL);
         if (sslInsecureSkipVerify) {
             log.warn("jdm.download.ssl-insecure-skip-verify=true: SSL certificate validation disabled (insecure)");

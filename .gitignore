@@ -45,3 +45,6 @@ out/
 .minio-started-by-jdm
 .redis-started-by-jdm
 .rabbitmq-started-by-jdm
+
+.cursor/
+.attach_pid*
