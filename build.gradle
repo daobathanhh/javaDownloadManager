@@ -42,7 +42,7 @@ dependencies {
 	implementation 'org.springframework.security:spring-security-crypto'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	implementation 'org.hibernate.validator:hibernate-validator'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
